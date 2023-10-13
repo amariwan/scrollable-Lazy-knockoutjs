@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Lazy Loading Tabelle mit KnockoutJS</title>
+        <style>
+            .table-wrapper {
+                overflow: auto;
+                height: 600px;
+                border: 1px solid black;
+                width: 100%;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            th,
+            td {
+                border: 1px solid black;
+                padding: 5px;
+            }
+
+            th {
+                background-color: #f2f2f2;
+            }
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.0/knockout-min.js"></script>
+    </head>
+
+    <body>
+        <div data-bind="foreach: columns">
+            <button data-bind="click: $parent.sortColumn, text: title"></button>
+        </div>
+        <div class="table-wrapper" data-bind="scroll: loadMoreData">
+            <table>
+                <thead>
+                    <tr data-bind="foreach: columns">
+                        <th data-bind="text: title"></th>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: rows">
+                    <tr data-bind="foreach: $parent.columns">
+                        <td data-bind="text: $parent[$data.field]"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+            function ViewModel() {
+                var self = this;
+
+                self.columns = ko.observableArray([{
+                        title: 'ID',
+                        field: 'id',
+                        sortable: true
+                    },
+                    {
+                        title: 'Name',
+                        field: 'name',
+                        sortable: true
+                    },
+                ]);
+
+                self.rows = ko.observableArray([]);
+
+                self.loadMoreData = function ( event) {
+                    var element = event.target;
+                    var scrollPosition = element.scrollTop;
+                    var scrollHeight = element.scrollHeight;
+                    var clientHeight = element.clientHeight;
+
+                    console.log((scrollHeight - scrollPosition) / clientHeight);
+
+                    if ((scrollHeight - scrollPosition) / clientHeight <= 1.1) {
+                        self.fetchData();
+                    }
+                };
+
+                self.fetchData = function () {
+                    var start = self.rows().length;
+                    var end = start + 20;
+                    console.log(start, end)
+                    for (var i = start; i < end; i++) {
+                        self.rows.push({
+                            id: i,
+                            name: 'Item ' + i
+                        });
+                    }
+                };
+
+                self.sortColumn = function (column) {
+                    if (!column.sortable) {
+                        return;
+                    }
+
+                    var field = column.field;
+                    var direction = column.direction || 1;
+
+                    self.rows.sort(function (a, b) {
+                        return (a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0) * direction;
+                    });
+
+                    column.direction = -direction;
+                };
+
+                self.fetchData();
+            }
+
+            ko.bindingHandlers.scroll = {
+                init: function (element, valueAccessor, allBindings, viewModel, bindingContext) {
+                    element.addEventListener('scroll', function () {
+                        console.log(arguments);
+                        valueAccessor().apply(viewModel, arguments);
+                    });
+                }
+            };
+
+            ko.applyBindings(new ViewModel());
+        </script>
+    </body>
+
+</html>
